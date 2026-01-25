@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Build outputs
+client/dist/
+server/static/
+
+# Environment files
+
+.env.local
+.env.*.local
+
+# Virtual environments
+venv/
+mail/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database
+*.db
+*.sqlite
+
+# Uploads (user files)
+server/uploads/
+
+# Yarn
+.yarn/
+.pnp.*

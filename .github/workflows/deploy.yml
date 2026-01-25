@@ -1,0 +1,285 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  SERVER_PATH: /var/www/job_apply
+  NODE_VERSION: '22'
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # ---------- Frontend Build ----------
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+          cache-dependency-path: client/yarn.lock
+
+      - name: Install Frontend Dependencies
+        working-directory: ./client
+        run: yarn install
+
+      - name: Build Frontend
+        working-directory: ./client
+        run: yarn run build
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+
+      # ---------- Backend Setup ----------
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          cache-dependency-path: server/requirements.txt
+
+      - name: Verify Backend Dependencies
+        working-directory: ./server
+        run: |
+          pip install --upgrade pip
+          pip check || true
+
+      # ---------- Create Deployment Artifact ----------
+      - name: Prepare Deployment Package
+        run: |
+          mkdir -p deployment/client
+          mkdir -p deployment/server
+          
+          # Copy frontend build
+          cp -r client/dist deployment/client/
+          cp client/package.json deployment/client/
+          
+          # Copy backend files (excluding virtual env and cache)
+          rsync -av --exclude='__pycache__' \
+                    --exclude='*.pyc' \
+                    --exclude='mail/' \
+                    --exclude='venv/' \
+                    --exclude='uploads/' \
+                    --exclude='.git' \
+                    server/ deployment/server/
+
+      - name: Upload Deployment Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-package
+          path: deployment/
+          retention-days: 1
+
+  # ==========================================
+  # DEPLOY JOB
+  # ==========================================
+  deploy:
+    name: Deploy to Server
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+      - name: Download Deployment Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-package
+          path: deployment/
+
+      - name: Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Create Backup on Server
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+            # Create backup directory
+            BACKUP_DIR="/var/backups/job_apply/$(date +%Y%m%d_%H%M%S)"
+            mkdir -p $BACKUP_DIR
+            
+            # Backup current deployment (if exists)
+            if [ -d "/var/www/job_apply" ]; then
+              cp -r /var/www/job_apply/client/dist $BACKUP_DIR/client_dist 2>/dev/null || true
+              cp /var/www/job_apply/server/.env $BACKUP_DIR/server_env 2>/dev/null || true
+            fi
+            
+            # Keep only last 5 backups
+            cd /var/backups/job_apply && ls -t | tail -n +6 | xargs -r rm -rf
+          ENDSSH
+
+      - name: Stop FastAPI Service
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+            # Stop the FastAPI service and Celery worker via Supervisor
+            supervisorctl stop fastapi || true
+            supervisorctl stop celery_worker || true
+          ENDSSH
+
+      - name: Clean Old Files (Preserve uploads and .env)
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+            # Create temp backup of important files
+            mkdir -p /tmp/job_apply_preserve
+            
+            # Preserve uploads folder
+            if [ -d "/var/www/job_apply/server/uploads" ]; then
+              cp -r /var/www/job_apply/server/uploads /tmp/job_apply_preserve/
+            fi
+            
+
+            # Preserve venv folder (to speed up deployment)
+            if [ -d "/var/www/job_apply/server/venv" ]; then
+              mv /var/www/job_apply/server/venv /tmp/job_apply_preserve/
+            fi
+            
+            # Clean directories
+            rm -rf /var/www/job_apply/client/dist
+            rm -rf /var/www/job_apply/server/app
+            rm -rf /var/www/job_apply/server/alembic
+            rm -f /var/www/job_apply/server/*.py
+            rm -f /var/www/job_apply/server/*.ini
+            rm -f /var/www/job_apply/server/*.txt
+            rm -f /var/www/job_apply/server/*.yaml
+          ENDSSH
+
+      - name: Deploy Files to Server
+        run: |
+          # Create directories if they don't exist
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+            mkdir -p /var/www/job_apply/client
+            mkdir -p /var/www/job_apply/server
+          ENDSSH
+          
+          # SCP files to server
+          scp -o StrictHostKeyChecking=no -r deployment/client/* ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/var/www/job_apply/client/
+          scp -o StrictHostKeyChecking=no -r deployment/server/* ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/var/www/job_apply/server/
+
+      - name: Restore Preserved Files & Install Dependencies
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+            cd /var/www/job_apply/server
+            
+            # Restore venv folder
+            if [ -d "/tmp/job_apply_preserve/venv" ]; then
+              mv /tmp/job_apply_preserve/venv ./
+            else
+              # Create new virtual environment if not exists
+              python3.11 -m venv venv
+            fi
+            
+            # Restore uploads folder
+            if [ -d "/tmp/job_apply_preserve/uploads" ]; then
+              cp -r /tmp/job_apply_preserve/uploads ./
+            else
+              mkdir -p uploads/resumes
+            fi
+            
+            # Cleanup temp files
+            rm -rf /tmp/job_apply_preserve
+            
+            # Activate and install/update dependencies
+            source venv/bin/activate
+            pip install --upgrade pip
+            pip install -r requirements.txt
+            
+            # Install gunicorn if not present
+            pip install gunicorn
+            
+            # Run database migrations
+            export ENVIRONMENT=production
+            alembic upgrade head
+          ENDSSH
+
+      - name: Set Permissions
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+            # Set proper ownership
+            chown -R www-data:www-data /var/www/job_apply
+            
+            # Set proper permissions
+            chmod -R 755 /var/www/job_apply
+            chmod -R 775 /var/www/job_apply/server/uploads
+          ENDSSH
+
+      - name: Start FastAPI & Celery & Reload Nginx
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+            # Copy Celery worker config if not exists
+            if [ ! -f /etc/supervisor/conf.d/celery_worker.conf ]; then
+              cp /var/www/job_apply/server/celery_worker.conf /etc/supervisor/conf.d/
+            fi
+            
+            # Reload supervisor config
+            supervisorctl reread
+            supervisorctl update
+            
+            # Start/Restart the FastAPI service and Celery worker
+            supervisorctl start fastapi
+            supervisorctl start celery_worker
+            
+            # Test nginx configuration
+            nginx -t
+            
+            # Reload nginx
+            systemctl reload nginx
+          ENDSSH
+
+      - name: Health Check
+        run: |
+          sleep 10
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+            # Check if FastAPI is running via Supervisor
+            if supervisorctl status fastapi | grep -q "RUNNING"; then
+              echo "✅ FastAPI service is running"
+            else
+              echo "❌ FastAPI service failed to start"
+              supervisorctl status fastapi
+              tail -50 /var/log/fastapi.err.log
+              exit 1
+            fi
+            
+            # Check if Celery worker is running
+            if supervisorctl status celery_worker | grep -q "RUNNING"; then
+              echo "✅ Celery worker is running"
+            else
+              echo "⚠️ Celery worker failed to start (may need Redis)"
+              supervisorctl status celery_worker
+              tail -20 /var/log/celery_worker.err.log || true
+            fi
+            
+            # Check if nginx is running
+            if systemctl is-active --quiet nginx; then
+              echo "✅ Nginx is running"
+            else
+              echo "❌ Nginx is not running"
+              exit 1
+            fi
+            
+            # Test API endpoint
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/docs)
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ API is responding (HTTP $HTTP_CODE)"
+            else
+              echo "⚠️ API health check returned HTTP $HTTP_CODE"
+            fi
+          ENDSSH
+
+      - name: Cleanup SSH Key
+        if: always()
+        run: rm -rf ~/.ssh/id_rsa
+
+      - name: Deployment Complete
+        run: |
+          echo "🚀 Deployment completed successfully!"
+          echo "📅 Deployed at: $(date)"
+          echo "🔗 Server: ${{ secrets.SERVER_HOST }}"

@@ -1,0 +1,179 @@
+%-------------------------
+% Resume in Latex
+% Author : Sufyan Liaqat (Modified with Dummy Data)
+%------------------------
+
+\documentclass[letterpaper,11pt]{article}
+
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{marvosym}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  urlcolor=black,
+  linkcolor=black,
+  citecolor=black
+}
+\usepackage{fancyhdr}
+\usepackage[english]{babel}
+\usepackage{tabularx}
+\usepackage{fontawesome5}
+\usepackage{multicol}
+\setlength{\multicolsep}{-3.0pt}
+\setlength{\columnsep}{-1pt}
+\input{glyphtounicode}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\addtolength{\oddsidemargin}{-0.6in}
+\addtolength{\evensidemargin}{-0.5in}
+\addtolength{\textwidth}{1.19in}
+\addtolength{\topmargin}{-.7in}
+\addtolength{\textheight}{1.4in}
+
+\urlstyle{same}
+
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+
+\titleformat{\section}{
+  \vspace{-4pt}\scshape\raggedright\large\bfseries
+}{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
+
+\pdfgentounicode=1
+
+\newcommand{\resumeItem}[1]{
+  \item\small{{#1 \vspace{-2pt}}}
+}
+
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+  \begin{tabular*}{1.0\textwidth}[t]{l@{\extracolsep{\fill}}r}
+  \textbf{#1} & \textbf{\small #2} \\
+  \textit{\small#3} & \textit{\small #4} \\
+  \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeProjectHeading}[2]{
+  \item
+  \begin{tabular*}{1.001\textwidth}{l@{\extracolsep{\fill}}r}
+  \small#1 & \textbf{\small #2}\\
+  \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.0in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-7pt}}
+\newcommand{\bluelink}[2]{\textcolor{blue}{\underline{\href{#1}{#2}}}}
+
+
+\begin{document}
+
+%----------HEADING----------
+\begin{center}
+  {\Huge \scshape Alex Johnson} \\ \vspace{2pt}
+  \textit{Full Stack Developer} \\ \vspace{1pt}
+  Toronto, Canada \\ \vspace{1pt}
+  \small \raisebox{-0.1\height}\faPhone\ +1-647-555-3210 ~
+  \href{mailto:alexjohnson.dev@gmail.com}{\raisebox{-0.2\height}\faEnvelope\ alexjohnson.dev@gmail.com} ~
+  \href{https://www.linkedin.com/in/alexjohnsondev}{\raisebox{-0.1\height}\faLinkedin\ LinkedIn} ~
+  \href{https://github.com/alexjohnsondev}{\raisebox{-0.2\height}\faGithub\ GitHub} ~
+  \href{https://alexjohnson.dev}{\raisebox{-0.2\height}\faGlobe\ Portfolio}
+  \vspace{-8pt}
+\end{center}
+
+
+%-----------SUMMARY-----------
+\section{SUMMARY}
+\begin{itemize}[leftmargin=0.15in, label={}]
+  \item{
+    Full Stack Developer with \textbf{2 years of experience} building scalable and responsive web applications using React, Node.js, and FastAPI. Strong background in REST/GraphQL APIs, microservices, and cloud deployment. Passionate about clean architecture and high-performance systems.
+  }
+\end{itemize}
+
+
+%-----------EXPERIENCE-----------
+\section{EXPERIENCE}
+\resumeSubHeadingListStart
+
+\resumeSubheading
+    {TechNova Solutions}{March 2025 -- Present}
+    {Software Engineer}{Remote}
+    \resumeItemListStart
+      \resumeItem{Developed a \textbf{workflow automation tool} using FastAPI and PostgreSQL reducing manual operations by 70\%.}
+      \resumeItem{Optimized SQL queries with SQLAlchemy ORM improving API response time from 850ms to 230ms.}
+      \resumeItem{Built \textbf{Next.js-based client dashboard} with server-side rendering improving SEO and page load speed.}
+      \resumeItem{Integrated AWS SES and S3 for automated file uploads and transactional email delivery.}
+    \resumeItemListEnd
+
+  \resumeSubheading
+    {CloudSoft Labs}{July 2024 -- February 2025}
+    {Junior Full Stack Developer}{Hybrid}
+    \resumeItemListStart
+      \resumeItem{Developed a \textbf{task management SaaS} platform using React, Node.js, and Redis caching.}
+      \resumeItem{Implemented user authentication with JWT and Google OAuth 2.0 for 5k+ monthly users.}
+      \resumeItem{Collaborated with DevOps team to containerize app using Docker and deployed to AWS ECS.}
+      \resumeItem{Improved CI/CD pipeline with GitHub Actions reducing deployment time by 40\%.}
+    \resumeItemListEnd
+
+\resumeSubHeadingListEnd
+
+
+%-----------PROJECTS-----------
+\section{PROJECTS}
+  \resumeSubHeadingListStart
+\resumeProjectHeading{\textbf{Foodify – AI Recipe Recommender} $|$  \bluelink{https://foodify.ai}{Live} $|$  \emph{MERN, OpenAI API, Tailwind, Redux Toolkit}}{}
+    \resumeItemListStart
+      \resumeItem{Built AI-based recipe recommender generating meal plans using OpenAI GPT-4 and Spoonacular API.}
+      \resumeItem{Integrated user dietary preferences and allergies filters, serving personalized recipes to 1k+ users.}
+      \resumeItem{Implemented JWT authentication, Stripe subscription plans, and MongoDB aggregation pipelines.}
+    \resumeItemListEnd
+\resumeProjectHeading{\textbf{TeamTrackr – Project Management System} $|$  \bluelink{https://teamtrackr.app}{Live} $|$  \emph{FastAPI, PostgreSQL, React, Celery, Redis, Socket.io}}{}
+    \resumeItemListStart
+      \resumeItem{Developed full stack collaborative project management platform with task boards and team chat.}
+      \resumeItem{Implemented async email notifications and reminders with Celery and Redis background workers.}
+      \resumeItem{Added analytics dashboard tracking task completion rate and productivity KPIs.}
+    \resumeItemListEnd
+\resumeProjectHeading{\textbf{DataLens – Real Estate Analytics Tool} $|$ \emph{Node.js, Express, MongoDB, React, BullMQ, Redis}}{}
+    \resumeItemListStart
+      \resumeItem{Created data scraper analyzing 10k+ listings daily to compute ROI, DSCR, and investment potential.}
+      \resumeItem{Implemented queue-based processing using BullMQ and Redis for scalable scraping operations.}
+      \resumeItem{Added visualization dashboards with Chart.js for pricing trends and performance insights.}
+    \resumeItemListEnd
+  \resumeSubHeadingListEnd
+
+
+%-----------TECHNICAL SKILLS-----------
+\section{TECHNICAL SKILLS}
+  \begin{itemize}[leftmargin=0.15in, label={}]
+    \small{\item{
+      \textbf{Frontend:} React.js, Next.js, React Native, Tailwind CSS, Redux Toolkit, TypeScript, JavaScript \\ \vspace{0.4em}
+      \textbf{Backend:} Node.js, Express.js, FastAPI, MongoDB, PostgreSQL, GraphQL, Prisma, Redis \\ \vspace{0.4em}
+      \textbf{DevOps:} Docker, NGINX, CI/CD (GitHub Actions), AWS (EC2, S3, ECS), DigitalOcean, Prometheus \\ \vspace{0.4em}
+      \textbf{Tools:} Git, GitHub, Postman, Swagger, Socket.io, Stripe, Cloudinary, Jira, Trello
+    }}
+  \end{itemize}
+
+
+%-----------EDUCATION-----------
+\section{EDUCATION}
+\resumeSubHeadingListStart
+\vspace{0.8em}
+\resumeSubheading
+{University of Toronto}{2019 -- 2023}
+{\parbox[t]{0.8\textwidth}{BS Computer Science \\[4pt]\textbf{Relevant Courses:} Web Development, Databases, Cloud Computing, Software Engineering}}{Toronto, Canada}
+\resumeSubHeadingListEnd
+
+
+\end{document}
